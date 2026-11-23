@@ -11,6 +11,7 @@ pub mod evm;
 pub mod fast_lz;
 pub mod handler;
 pub mod l1block;
+pub mod ledgera;
 pub mod precompiles;
 pub mod result;
 pub mod spec;

@@ -49,6 +49,8 @@ pub enum OpTransactionError {
     /// Non-deposit transactions on Optimism must have `enveloped_tx` field set
     /// to properly calculate L1 costs.
     MissingEnvelopedTx,
+    /// The sender lacks an active ledgerA Registry entry.
+    SenderNotAllowed,
 }
 
 impl TransactionError for OpTransactionError {}
@@ -66,6 +68,7 @@ impl Display for OpTransactionError {
                     "deposit transaction halted post-regolith; error will be bubbled up to main return handler"
                 )
             }
+            Self::SenderNotAllowed => f.write_str("ledgera: sender not allowed"),
             Self::MissingEnvelopedTx => {
                 write!(f, "missing enveloped transaction bytes for non-deposit transaction")
             }
