@@ -91,5 +91,5 @@ async fn pool_knows_the_node_limits() {
     );
 
     // Until its first canonical update, reth's validator would otherwise assume 30M.
-    assert_eq!(pool.validator().validator().block_gas_limit(), GENESIS_GAS_LIMIT);
+    assert_eq!(pool.validator().validator().inner().block_gas_limit(), GENESIS_GAS_LIMIT);
 }

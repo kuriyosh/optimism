@@ -5,6 +5,7 @@ use crate::{
     args::RollupArgs,
     derived_payload_service::DerivedPayloadServiceBuilder,
     engine::OpEngineValidator,
+    ledgera::KycValidatorWrapper,
     payload_service::OpPayloadServiceBuilder,
     txpool::{OpCustomTransactionPool, OpTransactionValidator},
 };
@@ -245,7 +246,11 @@ pub type OpNodeComponentBuilder<
     PayloadServiceBuilder = DerivedPayloadServiceBuilder<OpPayloadServiceBuilder>,
 > = ComponentsBuilder<
     Node,
-    OpPoolBuilder,
+    OpPoolBuilder<
+        crate::txpool::OpPooledTransaction,
+        CoinbaseTipOrdering<crate::txpool::OpPooledTransaction>,
+        KycValidatorWrapper,
+    >,
     PayloadServiceBuilder,
     OpNetworkBuilder,
     OpExecutorBuilder,
@@ -344,7 +349,7 @@ impl OpNode {
         ComponentsBuilder::default()
             .node_types::<Node>()
             .executor(OpExecutorBuilder::default())
-            .pool(self.standard_pool_builder())
+            .pool(self.standard_pool_builder().with_validator_wrapper(KycValidatorWrapper))
             .payload(DerivedPayloadServiceBuilder::new(OpPayloadServiceBuilder::new(
                 self.payload_builder(),
                 self.args.testing_sdm_fixed_policy,

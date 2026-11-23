@@ -80,6 +80,9 @@ pub enum OpInvalidTransactionError {
     /// The encoded transaction was missing during evm execution.
     #[error("missing enveloped transaction bytes")]
     MissingEnvelopedTx,
+    /// The ledgerA Registry does not allow this transaction's sender.
+    #[error("ledgera: sender not allowed")]
+    SenderNotAllowed,
     /// Transaction conditional errors.
     #[error(transparent)]
     TxConditionalErr(#[from] TxConditionalErr),
@@ -90,7 +93,8 @@ impl From<OpInvalidTransactionError> for jsonrpsee_types::error::ErrorObject<'st
         match err {
             OpInvalidTransactionError::DepositSystemTxPostRegolith |
             OpInvalidTransactionError::HaltedDepositPostRegolith |
-            OpInvalidTransactionError::MissingEnvelopedTx => {
+            OpInvalidTransactionError::MissingEnvelopedTx |
+            OpInvalidTransactionError::SenderNotAllowed => {
                 rpc_err(EthRpcErrorCode::TransactionRejected.code(), err.to_string(), None)
             }
             OpInvalidTransactionError::TxConditionalErr(_) => err.into(),
@@ -109,6 +113,7 @@ impl TryFrom<OpTxError> for OpInvalidTransactionError {
             }
             OpTransactionError::HaltedDepositPostRegolith => Ok(Self::HaltedDepositPostRegolith),
             OpTransactionError::MissingEnvelopedTx => Ok(Self::MissingEnvelopedTx),
+            OpTransactionError::SenderNotAllowed => Ok(Self::SenderNotAllowed),
             OpTransactionError::Base(err) => Err(err),
         }
     }

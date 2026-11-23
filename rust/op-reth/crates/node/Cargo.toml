@@ -22,6 +22,7 @@ reth-node-api.workspace = true
 reth-node-builder.workspace = true
 reth-tracing.workspace = true
 reth-provider.workspace = true
+reth-revm = { workspace = true, features = ["std"] }
 reth-transaction-pool.workspace = true
 reth-network.workspace = true
 reth-evm.workspace = true
@@ -96,7 +97,6 @@ reth-db-common.workspace = true
 reth-node-builder = { workspace = true, features = ["test-utils"] }
 reth-provider = { workspace = true, features = ["test-utils"] }
 reth-payload-util.workspace = true
-reth-revm = { workspace = true, features = ["std"] }
 reth-rpc.workspace = true
 reth-rpc-eth-api.workspace = true
 reth-rpc-eth-types.workspace = true

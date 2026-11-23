@@ -19,6 +19,7 @@ use reth_optimism_chainspec::OpChainSpecBuilder;
 use reth_optimism_node::{
     OpNode,
     args::RollupArgs,
+    ledgera::KycValidatorWrapper,
     node::{
         OpConsensusBuilder, OpExecutorBuilder, OpNetworkBuilder, OpNodeComponentBuilder,
         OpNodeTypes, OpPayloadBuilder, OpPoolBuilder,
@@ -96,7 +97,7 @@ where
         RollupArgs::default();
     ComponentsBuilder::default()
         .node_types::<Node>()
-        .pool(OpPoolBuilder::default())
+        .pool(OpPoolBuilder::default().with_validator_wrapper(KycValidatorWrapper))
         .executor(OpExecutorBuilder::default())
         .payload(BasicPayloadServiceBuilder::new(
             OpPayloadBuilder::new(compute_pending_block)

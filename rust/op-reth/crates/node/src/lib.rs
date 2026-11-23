@@ -26,6 +26,9 @@ pub use engine::OpEngineTypes;
 pub mod head_metrics;
 pub use head_metrics::{OpChainHeadMetrics, maintain_chain_head_metrics};
 
+/// ledgerA transaction pool admission.
+pub mod ledgera;
+
 pub mod node;
 pub use node::*;
 
@@ -59,5 +62,4 @@ pub use reth_optimism_evm::*;
 
 pub use reth_optimism_storage::OpStorage;
 
-use op_revm as _;
 use revm as _;

@@ -1,9 +1,11 @@
 //! Tests for the `OpPoolBuilder` extension seams.
 
+mod ledgera;
 mod ordering;
 mod validator;
 
 use alloy_consensus::{SignableTransaction, TxEip1559};
+use alloy_genesis::Genesis;
 use alloy_network::{TxSignerSync, eip2718::Encodable2718};
 use alloy_primitives::{Address, B256, Bytes, Signature, TxKind};
 use alloy_signer_local::PrivateKeySigner;
@@ -32,9 +34,16 @@ use reth_transaction_pool::TransactionOrdering;
 use std::sync::Arc;
 
 fn node_test_setup() -> (NodeConfig<OpChainSpec>, Arc<TempDatabase<DatabaseEnv>>, Runtime, u64) {
+    node_test_setup_with_genesis(
+        serde_json::from_str(include_str!("../../assets/genesis.json")).unwrap(),
+    )
+}
+
+fn node_test_setup_with_genesis(
+    genesis: Genesis,
+) -> (NodeConfig<OpChainSpec>, Arc<TempDatabase<DatabaseEnv>>, Runtime, u64) {
     reth_tracing::init_test_tracing();
 
-    let genesis = serde_json::from_str(include_str!("../../assets/genesis.json")).unwrap();
     let chain_spec = Arc::new(
         OpChainSpecBuilder::optimism_sepolia().genesis(genesis).ecotone_activated().build(),
     );

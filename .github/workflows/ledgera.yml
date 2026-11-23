@@ -1,0 +1,48 @@
+name: ledgerA execution layer
+
+on:
+  pull_request:
+    branches: [ledgera/op-reth-v2.9.0]
+  push:
+    branches: [ledgera/op-reth-v2.9.0]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: [op-revm, reth-optimism-node]
+    defaults:
+      run:
+        working-directory: rust
+    env:
+      CARGO_BUILD_JOBS: "2"
+      RUST_TEST_THREADS: "1"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+      CARGO_PROFILE_TEST_OPT_LEVEL: "0"
+    steps:
+      - uses: actions/checkout@71cf2267d89c5cb81562390fa70a37fa40b1305e # v6
+        with:
+          persist-credentials: false
+      - if: matrix.package == 'reth-optimism-node'
+        working-directory: .
+        run: |
+          git submodule update --init --depth 1 superchain-registry
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libclang-dev
+      - if: matrix.package == 'op-revm'
+        run: cargo test --locked --package op-revm
+      - if: matrix.package == 'reth-optimism-node'
+        shell: bash
+        run: |
+          cargo test --locked --package reth-optimism-node --lib --test e2e_testsuite
+          cargo test --locked --package reth-optimism-node --test it -- --list |
+            sed -n 's/: test$//p' > "${RUNNER_TEMP}/node-tests"
+          test -s "${RUNNER_TEMP}/node-tests"
+          # A fresh process releases the database and execution caches after each node test.
+          while IFS= read -r test_case; do
+            cargo test --locked --package reth-optimism-node --test it -- "$test_case" --exact < /dev/null
+          done < "${RUNNER_TEMP}/node-tests"

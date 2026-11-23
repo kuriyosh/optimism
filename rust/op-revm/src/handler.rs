@@ -127,6 +127,12 @@ where
         let (block, tx, cfg, journal, chain, _) = evm.ctx().all_mut();
         let spec = cfg.spec();
 
+        // The block executor commits earlier transactions to the DB without warming this journal.
+        let timestamp = block.timestamp().saturating_to::<u64>();
+        if !crate::ledgera::sender_allowed(journal.db_mut(), tx.caller(), tx.tx_type(), timestamp)? {
+            return Err(OpTransactionError::SenderNotAllowed.into());
+        }
+
         if tx.tx_type() == DEPOSIT_TRANSACTION_TYPE {
             let basefee = block.basefee() as u128;
             let blob_price = block.blob_gasprice().unwrap_or_default();
