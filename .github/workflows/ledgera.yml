@@ -44,5 +44,5 @@ jobs:
           test -s "${RUNNER_TEMP}/node-tests"
           # A fresh process releases the database and execution caches after each node test.
           while IFS= read -r test_case; do
-            cargo test --locked --package reth-optimism-node --test it -- "$test_case" --exact
+            cargo test --locked --package reth-optimism-node --test it -- "$test_case" --exact < /dev/null
           done < "${RUNNER_TEMP}/node-tests"

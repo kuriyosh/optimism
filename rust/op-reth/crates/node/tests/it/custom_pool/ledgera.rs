@@ -1,19 +1,28 @@
 use super::{
     build_components_with_pool, funded_signers, node_test_setup_with_genesis, signed_transfer_raw,
 };
+use alloy_consensus::{Block, BlockBody, Header, SignableTransaction, TxEip1559};
 use alloy_genesis::Genesis;
-use alloy_primitives::{B256, U256, uint};
+use alloy_primitives::{Address, B256, Signature, U256, uint};
 use alloy_signer_local::PrivateKeySigner;
 use op_alloy_network::Optimism;
 use op_revm::ledgera::{KYC_REGISTRY, account_slot, flags_slot, vasp_slot};
 use reth_e2e_test_utils::{node::NodeTestContext, transaction::TransactionTestContext};
+use reth_evm::execute::{BasicBlockExecutor, Executor};
 use reth_node_builder::{EngineNodeLauncher, Node, NodeBuilder, rpc::BasicEngineValidatorBuilder};
+use reth_optimism_chainspec::OpChainSpecBuilder;
+use reth_optimism_evm::{OpEvmConfig, OpRethReceiptBuilder};
 use reth_optimism_node::{
     OpEngineApiBuilder, OpNode,
     node::{OpEngineValidatorBuilder, OpPoolBuilder},
     utils::optimism_payload_attributes,
 };
+use reth_optimism_primitives::OpTransactionSigned;
+use reth_primitives_traits::{Account, RecoveredBlock};
+use reth_provider::StateProvider;
+use reth_revm::{database::StateProviderDatabase, test_utils::StateProviderTest};
 use reth_rpc_api::EthApiServer;
+use std::sync::Arc;
 
 const KYC_ERROR: &str = "ledgera: sender not allowed";
 const GAS: u64 = 200_000;
@@ -137,4 +146,52 @@ async fn ledgera_execution_skips_a_transaction_admitted_by_the_identity_pool() {
         payload.block().body().transactions.iter().map(|tx| *tx.tx_hash()).collect();
     assert!(hashes.contains(&allowed_hash));
     assert!(!hashes.contains(&denied_hash));
+}
+
+#[test]
+fn ledgera_block_executor_rejects_an_explicit_unregistered_transaction() {
+    let sender = Address::repeat_byte(0x34);
+    let chain_spec = Arc::new(OpChainSpecBuilder::optimism_mainnet().regolith_activated().build());
+    let tx: OpTransactionSigned = TxEip1559 {
+        chain_id: chain_spec.chain.id(),
+        gas_limit: 21_000,
+        max_fee_per_gas: MAX_FEE,
+        max_priority_fee_per_gas: TIP,
+        to: Address::repeat_byte(0x35).into(),
+        ..Default::default()
+    }
+    .into_signed(Signature::test_signature())
+    .into();
+    let block = RecoveredBlock::new_unhashed(
+        Block {
+            header: Header { timestamp: 1, number: 1, gas_limit: 1_000_000, ..Default::default() },
+            body: BlockBody { transactions: vec![tx], ..Default::default() },
+        },
+        vec![sender],
+    );
+    let config: OpEvmConfig = OpEvmConfig::new(chain_spec, OpRethReceiptBuilder::default());
+    let execute = |flags| {
+        let mut provider = StateProviderTest::default();
+        provider.insert_account(
+            KYC_REGISTRY,
+            Account { nonce: 1, ..Default::default() },
+            None,
+            [(B256::from(flags_slot()), flags)].into_iter().collect(),
+        );
+        provider.insert_account(
+            sender,
+            Account { balance: uint!(1000000000000000_U256), ..Default::default() },
+            None,
+            Default::default(),
+        );
+        BasicBlockExecutor::new(
+            config.clone(),
+            StateProviderDatabase::new((&provider).into_evm_state_provider()),
+        )
+        .execute(&block)
+    };
+
+    execute(U256::ZERO).unwrap();
+    let error = execute(U256::ONE).unwrap_err().to_string();
+    assert!(error.contains(KYC_ERROR), "{error}");
 }
